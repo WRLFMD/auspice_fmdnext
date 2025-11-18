@@ -24,7 +24,7 @@ import "./css/notifications.css";
 import "./css/select.css";
 
 /* FONTS */
-import 'typeface-lato';
+//import 'typeface-lato';
 
 /* set up non-redux state storage for the animation - use this conservitavely! */
 if (!window.NEXTSTRAIN) {window.NEXTSTRAIN = {};}

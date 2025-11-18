@@ -60,6 +60,10 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     if (extensionData.googleAnalyticsKey) {
       console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
     }
+    // Add support for custom public path
+    if (extensionData.publicPath) {
+      utils.verbose(`Using custom public path: ${extensionData.publicPath}`);
+    }
     // console.log("extensionData", extensionData);
   }
 
@@ -128,6 +132,11 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     customOutputPath ?
       path.resolve(customOutputPath, "dist") :
       path.resolve(__dirname, "dist");
+  
+  /* Use custom public path if provided in extensions, otherwise default */
+  const publicPath = (extensionData && extensionData.publicPath) ? 
+    extensionData.publicPath : 
+    "/dist/";
   utils.verbose(`Webpack writing output to: ${outputPath}`);
 
   /**
@@ -207,7 +216,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
       path: outputPath,
       filename: `auspice.[name].bundle${!devMode ? ".[contenthash]" : ""}.js`,
       chunkFilename: `auspice.chunk.[name].bundle${!devMode ? ".[chunkhash]" : ""}.js`,
-      publicPath: "/dist/"
+      publicPath: publicPath
     },
     resolve: {
       alias: aliasesToResolve,

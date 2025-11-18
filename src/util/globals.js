@@ -148,6 +148,22 @@ export const getServerAddress = () => {
   return "/charon"; // default
 };
 
++/**
++ * Get the base path for the application
++ * This is used for routing and navigation
++ * Default value: "/"
++ */
+export const getBasePath = () => {
+  if (hasExtension("basePath")) {
+    const basePath = getExtension("basePath");
+    // Ensure basePath starts with / and doesn't end with /
+    return basePath.startsWith("/") ? 
+      basePath.replace(/\/$/, "") : 
+      "/" + basePath.replace(/\/$/, "");
+  }
+  return ""; // default (root)
+};
+
 export const months = {
   1: 'Jan',
   2: 'Feb',
