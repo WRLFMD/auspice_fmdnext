@@ -221,6 +221,12 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     resolve: {
       alias: aliasesToResolve,
       extensions: ['.ts', '.tsx', '...'],
+      modules: [
+        'node_modules',
+        path.resolve(__dirname, 'node_modules'),
+        // Add this line to include extensions in module resolution
+        extensionPath ? path.resolve(extensionPath, '..') : path.resolve(__dirname)
+      ],
       fallback: {
         buffer: require.resolve("buffer/"),
         fs: false
