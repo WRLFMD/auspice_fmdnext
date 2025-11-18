@@ -148,7 +148,7 @@ export const getServerAddress = () => {
   return "/charon"; // default
 };
 
-+/**
+/**
 + * Get the base path for the application
 + * This is used for routing and navigation
 + * Default value: "/"
