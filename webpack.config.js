@@ -93,7 +93,12 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   const pluginHtml = new HtmlWebpackPlugin({
     filename: 'index.html',
     template: './src/index.html',
-    basePath: extensionData?.basePath || '/'
+    basePath: extensionData?.basePath || '/',
+    favicon: extensionData?.favicon ? 
+      path.resolve(
+        path.dirname(extensionPath), 
+        extensionData.favicon
+      ) : path.resolve(__dirname, 'favicon.png')    
   });
   const cleanWebpackPlugin = new CleanWebpackPlugin({
     cleanStaleWebpackAssets: true
