@@ -25,6 +25,12 @@ function getInitialMobileState() {
   return window.innerWidth < controlsHiddenWidth;
 }
 
+function getServerAddress() {
+  if (hasExtension("serverAddress")) {
+    return getExtension("serverAddress");
+  }
+  return "/charon"; // Default fallback
+}
 
 const general = (state = {
   defaults,
@@ -32,7 +38,8 @@ const general = (state = {
   errorMessage: undefined,
   pathname: window.location.pathname, // keep a copy of what the app "thinks" the pathname is
   language: query.lang ? query.lang : defaults.language,
-  mobileDisplay: getInitialMobileState()
+  mobileDisplay: getInitialMobileState(),
+  serverAddress: getServerAddress()
 }, action) => {
   switch (action.type) {
     case types.PAGE_CHANGE: {

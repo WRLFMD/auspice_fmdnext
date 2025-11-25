@@ -11,8 +11,34 @@ const zlib = require("zlib");
 
 /* Webpack config generator */
 
+// Logo info variable (used by custom plugin)
+let logoInfo = null;
+
+/* Custom plugin to copy logo to dist */
+class CopyLogoPlugin {
+  apply(compiler) {
+    compiler.hooks.emit.tapAsync('CopyLogoPlugin', (compilation, callback) => {
+      if (logoInfo && fs.existsSync(logoInfo.src)) {
+        try {
+          const logoContent = fs.readFileSync(logoInfo.src);
+          compilation.assets[logoInfo.filename] = {
+            source: () => logoContent,
+            size: () => logoContent.length
+          };
+        } catch (err) {
+          console.error('Failed to copy logo:', err.message);
+        }
+      }
+      callback();
+    });
+  }
+}
+
 const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyzeBundle=false}) => {
   utils.verbose(`Generating webpack config. Extensions? ${!!extensionPath}. devMode: ${devMode}`);
+
+  // Reset logoInfo for each config generation
+  logoInfo = null;
 
   // Pins all react stuff, and uses hot loader's dom (can be used safely in production)
   // Format is either "libName" or "libName:libPath"
@@ -53,15 +79,54 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
 
   let extensionData;
   if (extensionPath) {
-    // console.log("BUILDING WITH EXTENSIONS");
-    const dir = path.resolve(__dirname, path.dirname(extensionPath));
-    aliasesToResolve["@extensions"] = dir;
-    extensionData = JSON.parse(fs.readFileSync(extensionPath, {encoding: 'utf8'}));
+    const resolvedExtensionPath = path.resolve(extensionPath);
+    const extensionDir = path.dirname(resolvedExtensionPath);
+   
+    aliasesToResolve["@extensions"] = extensionDir;
+    extensionData = JSON.parse(fs.readFileSync(resolvedExtensionPath, {encoding: 'utf8'}));
+  
+    // Normalize component paths - remove leading ./ to avoid double-slash issues
+    Object.keys(extensionData).forEach((key) => {
+      if (key.endsWith('Component') || key === 'navbarLogo' || key === 'favicon') {
+        const originalPath = extensionData[key];
+      
+        if (originalPath) {
+          let resolvedPath;
+          if (path.isAbsolute(originalPath)) {
+            resolvedPath = originalPath;
+          } else {
+            resolvedPath = path.resolve(extensionDir, originalPath);
+          }
+        
+          const relativePath = path.relative(extensionDir, resolvedPath);
+          let normalizedPath = relativePath.split(path.sep).join('/');
+          normalizedPath = normalizedPath.replace(/^\.\//, '').replace(/^\.\.\//, '');
+        
+          extensionData[key] = normalizedPath;
+        }
+      }
+    });
+
+    // Handle navbar logo - set up for custom plugin
+    if (extensionData.navbarLogo) {
+      const logoSrc = path.resolve(extensionDir, extensionData.navbarLogo.replace(/^\.\//, ''));
+      const logoFilename = path.basename(logoSrc);
+      
+      if (fs.existsSync(logoSrc)) {
+        logoInfo = { src: logoSrc, filename: logoFilename };
+        extensionData.navbarLogoFilename = logoFilename;
+      }
+    }
+
     if (extensionData.googleAnalyticsKey) {
       console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
     }
-    // console.log("extensionData", extensionData);
   }
+
+  const customPublicPath = extensionData?.publicPath || "/dist/";
+  const normalizedPublicPath = customPublicPath.endsWith('/') 
+    ? customPublicPath 
+    : customPublicPath + '/';
 
   /* plugins */
   /* inject strings into the client-accessible process.env */
@@ -92,24 +157,33 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   });
   const pluginHtml = new HtmlWebpackPlugin({
     filename: 'index.html',
-    template: './src/index.html'
+    template: './src/index.html',
+    basePath: extensionData?.basePath || '/',
+    favicon: extensionData?.favicon ? 
+      path.resolve(
+        path.dirname(extensionPath), 
+        extensionData.favicon
+      ) : path.resolve(__dirname, 'favicon.png')    
   });
   const cleanWebpackPlugin = new CleanWebpackPlugin({
     cleanStaleWebpackAssets: true
   });
+  
   const plugins = devMode ? [
     new LodashModuleReplacementPlugin(),
     new webpack.HotModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    ...(logoInfo ? [new CopyLogoPlugin()] : [])
   ] : [
     new LodashModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginCompressGzip,
     pluginCompressBrotli,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    ...(logoInfo ? [new CopyLogoPlugin()] : [])
   ];
 
   if (analyzeBundle) {
@@ -207,7 +281,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
       path: outputPath,
       filename: `auspice.[name].bundle${!devMode ? ".[contenthash]" : ""}.js`,
       chunkFilename: `auspice.chunk.[name].bundle${!devMode ? ".[chunkhash]" : ""}.js`,
-      publicPath: "/dist/"
+      publicPath: normalizedPublicPath
     },
     resolve: {
       alias: aliasesToResolve,

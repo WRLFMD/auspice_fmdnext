@@ -2,6 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 import { withTranslation } from "react-i18next";
 import ChooseDatasetSelect from "./choose-dataset-select";
+import { getBasePath } from "../../util/extensions";
 import { ControlHeader } from "./controlHeader";
 
 // const DroppedFiles = withTheme((props) => {
@@ -33,11 +34,26 @@ class ChooseDataset extends React.Component {
       return null;
     }
 
-    const displayedDatasetString = window.location.pathname
-      .replace(/^\//, '')
-      .replace(/\/$/, '')
+    // Get the current URL and strip the basePath to get the actual dataset path
+    let pathname = window.location.pathname;
+    const basePath = getBasePath();
+    
+    if (basePath && basePath !== '/') {
+      const basePathNormalized = basePath.replace(/\/$/, '');
+      if (pathname.startsWith(basePathNormalized + '/')) {
+        pathname = pathname.substring(basePathNormalized.length);
+      } else if (pathname === basePathNormalized) {
+        pathname = '';
+      }
+    }
+    
+    const displayedDatasetString = pathname
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '')
       .split(":")[0];
-    const displayedDataset = displayedDatasetString.split("/");
+
+    // Filter out empty parts to avoid creating unnecessary dropdowns
+    const displayedDataset = displayedDatasetString.split("/").filter(part => part.length > 0);
 
     const options = displayedDataset.map((_, i) =>
       Array.from(

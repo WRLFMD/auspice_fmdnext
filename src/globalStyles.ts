@@ -1,9 +1,9 @@
 import { controlsWidth } from "./util/globals";
 
 /* IF YOU CHANGE THINGS HERE CHANGE THEM IN static.css AS WELL! */
-export const titleFont = "Lato, Helvetica Neue, Helvetica, sans-serif";
-export const headerFont = "Lato, Helvetica Neue, Helvetica, sans-serif";
-export const dataFont = "Lato, Helvetica Neue, Helvetica, sans-serif";
+export const titleFont = "Geist, Helvetica Neue, Helvetica, sans-serif";
+export const headerFont = "Geist, Helvetica Neue, Helvetica, sans-serif";
+export const dataFont = "Geist, Helvetica Neue, Helvetica, sans-serif";
 export const lighterGrey = "rgb(200, 200, 200)";
 export const darkGrey = "#333";
 export const medGrey = "#888";

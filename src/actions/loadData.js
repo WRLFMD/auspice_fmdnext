@@ -1,3 +1,4 @@
+import { getBasePath } from "../util/extensions";
 import queryString from "query-string";
 import * as types from "./types";
 import { getServerAddress } from "../util/globals";
@@ -13,19 +14,35 @@ import { updateColorByWithRootSequenceData } from "../actions/colors";
 import { explodeTree } from "./tree";
 
 export function getDatasetNamesFromUrl(url) {
+  // Remove basePath from URL if present
+  const basePath = getBasePath();  
+  let processedUrl = url;
+  
+  if (basePath && basePath !== '/') {
+    const basePathNormalized = basePath.replace(/\/$/, '');
+    
+    if (url.startsWith(basePathNormalized + '/')) {
+      processedUrl = url.substring(basePathNormalized.length);
+    } else if (url === basePathNormalized) {
+      processedUrl = '';
+    }
+  }
+  
+  // Handle second tree (colon notation for tanglegrams)
   let secondTreeUrl;
-  if (url.includes(":")) {
-    const parts = url.replace(/^\//, '')
-      .replace(/\/$/, '')
-      .split(":");
-    url = parts[0];
-    secondTreeUrl = parts[1];
-  }
-  if (url.startsWith('/')) url = url.slice(1);
-  if (secondTreeUrl && secondTreeUrl.startsWith('/')) {
-    secondTreeUrl = secondTreeUrl.slice(1);
-  }
-  return [url, secondTreeUrl];
+    if (processedUrl.includes(":")) {
+      const parts = processedUrl.replace(/^\//, '').replace(/\/$/, '').split(":");
+      processedUrl = parts[0];
+      secondTreeUrl = parts[1];
+    }
+
+    // Clean up slashes 
+    processedUrl = processedUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+    if (secondTreeUrl && secondTreeUrl.startsWith('/')) {
+      secondTreeUrl = secondTreeUrl.slice(1);
+    }
+
+  return [processedUrl, secondTreeUrl];
 }
 
 export const loadSecondTree = (secondTreeUrl, firstTreeUrl) => async (dispatch, getState) => {
@@ -121,7 +138,14 @@ async function dispatchCleanStart(dispatch, main, second, query, narrativeBlocks
   const json = await main.main;
   const measurementsData = main.measurements ? (await main.measurements) : undefined;
   const secondTreeDataset = second ? (await second.main) : undefined;
-  const pathnameShouldBe = second ? `${main.pathname}:${second.pathname}` : main.pathname;
+  
+  // Include basePath in the pathname
+  const basePath = getBasePath();
+  const datasetPath = second ? `${main.pathname}:${second.pathname}` : main.pathname;
+  const pathnameShouldBe = basePath && basePath !== '/' 
+    ? `${basePath}${datasetPath}`.replace(/\/\//g, '/') 
+    : datasetPath; 
+
   dispatch({
     type: types.CLEAN_START,
     pathnameShouldBe: narrativeBlocks ? undefined : pathnameShouldBe,

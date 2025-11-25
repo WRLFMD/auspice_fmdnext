@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { connect } from "react-redux";
 import { hot } from 'react-hot-loader/root';
+import { autoLoadFirstDataset } from "./actions/navigation";
 import Monitor from "./components/framework/monitor";
 import DatasetLoader from "./components/datasetLoader";
 import { FullPageSpinner } from "./components/framework/spinner";
@@ -20,8 +21,23 @@ if (module.hot) {
   setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
 }
 
-@connect((state) => ({displayComponent: state.general.displayComponent}))
+@connect((state) => ({displayComponent: state.general.displayComponent}), {autoLoadFirstDataset})
 class MainComponentSwitch extends React.Component {
+  componentDidMount() {
+    // If displayComponent is set to autoLoadFirstDataset, trigger the action
+    if (this.props.displayComponent === "autoLoadFirstDataset") {
+      this.props.autoLoadFirstDataset();
+    }
+  }
+  
+  componentDidUpdate(prevProps) {
+    // Handle case where component updates to autoLoadFirstDataset
+    if (this.props.displayComponent === "autoLoadFirstDataset" && 
+        prevProps.displayComponent !== "autoLoadFirstDataset") {
+      this.props.autoLoadFirstDataset();
+    }
+  }
+  
   render() {
     // console.log("MainComponentSwitch running (should be infrequent!)", this.props.displayComponent)
     switch (this.props.displayComponent) {
@@ -51,6 +67,13 @@ class MainComponentSwitch extends React.Component {
         );
       case "datasetLoader":
         return (<DatasetLoader/>);
+      case "autoLoadFirstDataset":
+        // Show spinner while loading first dataset
+        return (
+          <Suspense fallback={<FullPageSpinner/>}>
+            <FullPageSpinner/>
+          </Suspense>
+        );
       default:
         console.error(`reduxStore.general.displayComponent is invalid (${this.props.displayComponent})`);
         return (<Splash/>);

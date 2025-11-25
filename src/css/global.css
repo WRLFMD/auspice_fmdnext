@@ -1,6 +1,5 @@
-
 html, p, div, input, button {
-  font-family: "Lato", "Helvetica Neue", "Helvetica", "sans-serif";
+  font-family: "Geist", "Helvetica Neue", "Helvetica", "sans-serif";
   font-weight: 400;
 }
 /*! normalize.css v3.0.2 | MIT License | git.io/normalize */
@@ -32,7 +31,7 @@ a, .link {
   color: #5097BA;
   text-decoration: none;
   cursor: pointer;
-  font-family: "Lato", "Helvetica Neue", "Helvetica", "sans-serif";
+  font-family: "Geist", "Helvetica Neue", "Helvetica", "sans-serif";
   font-weight: 400;
   font-size: 94%;
 }
