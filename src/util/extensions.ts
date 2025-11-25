@@ -37,3 +37,15 @@ export const getExtension = (what: string): any | false => {
 export const hasExtension = (what: string): boolean => {
   return Object.keys(registry).includes(what);
 };
+
+/**
+ * Get the base path for the application
+ * This is used for client-side routing and navigation
+ */
+export const getBasePath = (): string => {
+  return registry.basePath || '/';
+};
+
+export const shouldSkipSplashToFirstDataset = (): boolean => {
+  return registry.skipSplashToFirstDataset === true;
+};

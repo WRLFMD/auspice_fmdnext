@@ -3,6 +3,7 @@ import { createStateFromQueryOrJSONs } from "./recomputeReduxState";
 import { PAGE_CHANGE, URL_QUERY_CHANGE_WITH_COMPUTED_STATE } from "./types";
 import { getDatasetNamesFromUrl } from "./loadData";
 import { errorNotification } from "./notifications";
+import { shouldSkipSplashToFirstDataset, getBasePath } from "../util/extensions";
 
 /* Given a URL, what "page" should be displayed?
  * "page" means the main app, splash page, status page etc
@@ -10,8 +11,25 @@ import { errorNotification } from "./notifications";
  * redirect to the splash page if the datasets are unavailable
  */
 export const chooseDisplayComponentFromURL = (url) => {
-  const parts = url.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "").split("/");
-  // todo - use URL() not the above code, but `url` is not actually the URL so...
+  // Remove basePath from URL if present
+  const basePath = getBasePath();
+  let processedUrl = url;
+  
+  if (basePath !== '/' && url.startsWith(basePath)) {
+    processedUrl = url.substring(basePath.length - 1); // Keep one leading slash
+  }
+  
+  const parts = processedUrl.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "").split("/");
+  
+  // Check if we should skip splash page and go directly to first dataset
+  const shouldSkipSplash = shouldSkipSplashToFirstDataset();
+  const isRootPath = !parts.length || (parts.length === 1 && parts[0] === "");
+  
+  if (shouldSkipSplash && isRootPath) {
+    // Instead of showing splash, we'll trigger the datasetLoader
+    // The datasetLoader will be enhanced to automatically load the first dataset
+    return "autoLoadFirstDataset";
+  }
 
   if (isNarrativeEditor(parts)) return "debugNarrative";
   if (
@@ -124,6 +142,32 @@ export const changePage = ({
       pushState: push,
       query
     });
+  }
+};
+
+/**
+ * Action to automatically load the first available dataset
+ * This is triggered when skipSplashToFirstDataset is enabled
+ */
+export const autoLoadFirstDataset = () => async (dispatch, getState) => {
+  try {
+    const basePath = getBasePath();
+    const serverAddress = getState().general.serverAddress || "/charon";
+    const response = await fetch(`${serverAddress}/getAvailable`);
+    const data = await response.json();
+    
+    if (data.datasets && data.datasets.length > 0) {
+      // Sort datasets alphabetically and get the first one
+      const sortedDatasets = data.datasets.sort((a, b) => a.request.localeCompare(b.request));
+      const firstDataset = sortedDatasets[0].request;
+      dispatch(changePage({ path: `${basePath}${firstDataset}`, push: true }));
+    } else {
+      // No datasets available, show splash page with error
+      dispatch(goTo404("No datasets found"));
+    }
+  } catch (error) {
+    console.error("Error loading first dataset:", error);
+    dispatch(goTo404("Error loading datasets"));
   }
 };
 

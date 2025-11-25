@@ -92,7 +92,8 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   });
   const pluginHtml = new HtmlWebpackPlugin({
     filename: 'index.html',
-    template: './src/index.html'
+    template: './src/index.html',
+    basePath: extensionData?.basePath || '/'
   });
   const cleanWebpackPlugin = new CleanWebpackPlugin({
     cleanStaleWebpackAssets: true

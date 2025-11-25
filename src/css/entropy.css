@@ -13,7 +13,7 @@ the overlay added on key-presses is is not a child of .brush */
 }
 
 #d3entropy .niceText {
-  font-family: "Lato", "Helvetica Neue", "Helvetica", "sans-serif";
+  font-family: "Geist", "Helvetica Neue", "Helvetica", "sans-serif";
   font-size: 14px;
   font-style: italic;
   color: var(--medGrey);
