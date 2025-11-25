@@ -38,7 +38,7 @@ export const SidebarContainer = styled.div`
 const sidebarThemeDefaults = {
   background: "#30353F",
   color: "#D3D3D3",
-  "font-family": "Lato, Helvetica Neue, Helvetica, sans-serif",
+  "font-family": "Geist, Helvetica Neue, Helvetica, sans-serif",
   sidebarBoxShadow: "rgba(255, 255, 255, 1)",
   selectedColor: "#5DA8A3",
   unselectedColor: "#BBB",

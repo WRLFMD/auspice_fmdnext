@@ -2,6 +2,7 @@
 const path = require("path");
 const webpack = require("webpack");
 const CompressionPlugin = require('compression-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
 const utils = require('./cli/utils');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -53,15 +54,50 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
 
   let extensionData;
   if (extensionPath) {
-    // console.log("BUILDING WITH EXTENSIONS");
-    const dir = path.resolve(__dirname, path.dirname(extensionPath));
-    aliasesToResolve["@extensions"] = dir;
-    extensionData = JSON.parse(fs.readFileSync(extensionPath, {encoding: 'utf8'}));
+    const resolvedExtensionPath = path.resolve(extensionPath);
+    const extensionDir = path.dirname(resolvedExtensionPath);
+   
+    aliasesToResolve["@extensions"] = extensionDir;
+    extensionData = JSON.parse(fs.readFileSync(resolvedExtensionPath, {encoding: 'utf8'}));
+  
+    // Normalize component paths - remove leading ./ to avoid double-slash issues
+    Object.keys(extensionData).forEach((key) => {
+      if (key.endsWith('Component') || key === 'navbarLogo' || key === 'favicon') {
+        const originalPath = extensionData[key];
+      
+        if (originalPath) {
+          let resolvedPath;
+          if (path.isAbsolute(originalPath)) {
+            resolvedPath = originalPath;
+          } else {
+            resolvedPath = path.resolve(extensionDir, originalPath);
+          }
+        
+          const relativePath = path.relative(extensionDir, resolvedPath);
+          let normalizedPath = relativePath.split(path.sep).join('/');
+          normalizedPath = normalizedPath.replace(/^\.\//, '').replace(/^\.\.\//, '');
+        
+          extensionData[key] = normalizedPath;
+        }
+      }
+    });
+
+    // Handle navbar logo - extract just the filename for runtime access
+    if (extensionData.navbarLogo) {
+      const logoSrc = path.resolve(extensionDir, extensionData.navbarLogo.replace(/^\.\//, ''));
+      const logoFilename = path.basename(logoSrc);
+      extensionData.navbarLogoFilename = logoFilename;
+    }
+
     if (extensionData.googleAnalyticsKey) {
       console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
     }
-    // console.log("extensionData", extensionData);
   }
+
+  const customPublicPath = extensionData?.publicPath || "/dist/";
+  const normalizedPublicPath = customPublicPath.endsWith('/') 
+    ? customPublicPath 
+    : customPublicPath + '/';
 
   /* plugins */
   /* inject strings into the client-accessible process.env */
@@ -92,24 +128,56 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   });
   const pluginHtml = new HtmlWebpackPlugin({
     filename: 'index.html',
-    template: './src/index.html'
+    template: './src/index.html',
+    basePath: extensionData?.basePath || '/',
+    favicon: extensionData?.favicon ? 
+      path.resolve(
+        path.dirname(extensionPath), 
+        extensionData.favicon
+      ) : path.resolve(__dirname, 'favicon.png')    
   });
   const cleanWebpackPlugin = new CleanWebpackPlugin({
     cleanStaleWebpackAssets: true
   });
+
+  // Copy static assets (like navbar logo) to dist directory
+  const copyPatterns = [];
+  if (extensionData?.navbarLogo && extensionPath) {
+    const logoSrc = path.resolve(
+      path.dirname(extensionPath), 
+      extensionData.navbarLogo.replace(/^\.\//, '')
+    );
+    
+    // Only add copy pattern if file exists
+    if (fs.existsSync(logoSrc)) {
+      copyPatterns.push({
+        from: logoSrc,
+        to: path.basename(logoSrc), // Copy to root of dist with same filename
+        noErrorOnMissing: true
+      });
+    }
+  }
+
+  // Create CopyWebpackPlugin only if there are files to copy
+  const pluginCopy = copyPatterns.length > 0 
+    ? new CopyWebpackPlugin({ patterns: copyPatterns })
+    : null;
+
   const plugins = devMode ? [
     new LodashModuleReplacementPlugin(),
     new webpack.HotModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    ...(pluginCopy ? [pluginCopy] : [])
   ] : [
     new LodashModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginCompressGzip,
     pluginCompressBrotli,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    ...(pluginCopy ? [pluginCopy] : [])
   ];
 
   if (analyzeBundle) {
@@ -207,7 +275,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
       path: outputPath,
       filename: `auspice.[name].bundle${!devMode ? ".[contenthash]" : ""}.js`,
       chunkFilename: `auspice.chunk.[name].bundle${!devMode ? ".[chunkhash]" : ""}.js`,
-      publicPath: "/dist/"
+      publicPath: normalizedPublicPath
     },
     resolve: {
       alias: aliasesToResolve,

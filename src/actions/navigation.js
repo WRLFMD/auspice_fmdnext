@@ -3,6 +3,7 @@ import { createStateFromQueryOrJSONs } from "./recomputeReduxState";
 import { PAGE_CHANGE, URL_QUERY_CHANGE_WITH_COMPUTED_STATE } from "./types";
 import { getDatasetNamesFromUrl } from "./loadData";
 import { errorNotification } from "./notifications";
+import { shouldSkipSplashToFirstDataset, getBasePath } from "../util/extensions";
 
 /* Given a URL, what "page" should be displayed?
  * "page" means the main app, splash page, status page etc
@@ -10,10 +11,37 @@ import { errorNotification } from "./notifications";
  * redirect to the splash page if the datasets are unavailable
  */
 export const chooseDisplayComponentFromURL = (url) => {
-  const parts = url.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "").split("/");
-  // todo - use URL() not the above code, but `url` is not actually the URL so...
+  // Remove basePath from URL if present to get actual dataset path
+  const basePath = getBasePath();
+  let processedUrl = url;
+  
+  if (basePath && basePath !== '/') {
+    // Normalize basePath (remove trailing slash for comparison)
+    const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;  
+    if (url.startsWith(basePathNormalized)) {
+      processedUrl = url.substring(basePathNormalized.length);
+    }
+  }
 
-  if (isNarrativeEditor(parts)) return "debugNarrative";
+  // Ensure leading slash
+  if (!processedUrl.startsWith('/')) {
+    processedUrl = '/' + processedUrl;
+  }
+  
+  const parts = processedUrl.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "").split("/");
+  
+  // Check if we should skip splash page and go directly to first dataset
+  const shouldSkipSplash = shouldSkipSplashToFirstDataset();
+  const isRootPath = !parts.length || (parts.length === 1 && parts[0] === "");
+  
+  if (shouldSkipSplash && isRootPath) {
+    // Instead of showing splash, trigger automatic loading of first dataset
+    return "autoLoadFirstDataset";
+  }
+
+  if (isNarrativeEditor(parts)) {
+    return "debugNarrative";
+  }
   if (
     !parts.length ||
     (parts.length === 1 && parts[0] === "") ||
@@ -27,6 +55,38 @@ export const chooseDisplayComponentFromURL = (url) => {
     return "status";
   }
   return "datasetLoader"; // fallthrough
+};
+
+/**
+ * Action to automatically load the first available dataset
+ * This is triggered when skipSplashToFirstDataset is enabled
+ */
+export const autoLoadFirstDataset = () => async (dispatch, getState) => {
+  try {
+    const basePath = getBasePath();
+    const serverAddress = getState().general.serverAddress || "/charon";
+    const response = await fetch(`${serverAddress}/getAvailable`);  
+    const data = await response.json();
+    
+    if (data.datasets && data.datasets.length > 0) {
+      // Sort datasets alphabetically and get the first one
+      const sortedDatasets = data.datasets.sort((a, b) => a.request.localeCompare(b.request));
+      const firstDataset = sortedDatasets[0].request;
+            
+      // Construct the full path with basePath
+      const fullPath = basePath && basePath !== '/' 
+        ? `${basePath}${firstDataset}`.replace(/\/\//g, '/') 
+        : `/${firstDataset}`;
+      
+      dispatch(changePage({ path: fullPath, push: true }));
+    } else {
+      // No datasets available, show splash page with error
+      dispatch(goTo404("No datasets found"));
+    }
+  } catch (error) {
+    console.error("Error loading first dataset:", error);
+    dispatch(goTo404("Error loading datasets"));
+  }
 };
 
 /*

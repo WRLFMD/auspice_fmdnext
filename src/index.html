@@ -4,8 +4,16 @@
     <title>auspice</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <% 
+      const basePath = htmlWebpackPlugin.options.basePath || '/';
+      const faviconPath = basePath !== '/' 
+        ? basePath.replace(/\/$/, '') + '/favicon.png'
+        : '/favicon.png';
+    %>
+    <link rel="shortcut icon" href="<%= faviconPath %>" type="image/png">
+    <link rel="icon" href="<%= faviconPath %>" type="image/png">    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
       .rootSpinner {
