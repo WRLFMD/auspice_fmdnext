@@ -63,6 +63,11 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     // console.log("extensionData", extensionData);
   }
 
+  const customPublicPath = extensionData?.publicPath || "/dist/";
+  const normalizedPublicPath = customPublicPath.endsWith('/') 
+    ? customPublicPath 
+    : customPublicPath + '/';
+
   /* plugins */
   /* inject strings into the client-accessible process.env */
   const pluginProcessEnvData = new webpack.DefinePlugin({
@@ -213,7 +218,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
       path: outputPath,
       filename: `auspice.[name].bundle${!devMode ? ".[contenthash]" : ""}.js`,
       chunkFilename: `auspice.chunk.[name].bundle${!devMode ? ".[chunkhash]" : ""}.js`,
-      publicPath: "/dist/"
+      publicPath: normalizedPublicPath
     },
     resolve: {
       alias: aliasesToResolve,
