@@ -68,6 +68,11 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     ? customPublicPath 
     : customPublicPath + '/';
 
+  console.log('=== WEBPACK CONFIG ===');
+  console.log('publicPath:', normalizedPublicPath);
+  console.log('extensionData:', JSON.stringify(extensionData, null, 2));
+  console.log('=====================');
+
   /* plugins */
   /* inject strings into the client-accessible process.env */
   const pluginProcessEnvData = new webpack.DefinePlugin({
