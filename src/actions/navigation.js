@@ -15,10 +15,19 @@ export const chooseDisplayComponentFromURL = (url) => {
   const basePath = getBasePath();
   let processedUrl = url;
   
-  if (basePath !== '/' && url.startsWith(basePath)) {
-    processedUrl = url.substring(basePath.length - 1); // Keep one leading slash
+  if (basePath && basePath !== '/') {
+    // Normalize basePath (remove trailing slash for comparison)
+    const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+    if (url.startsWith(basePathNormalized)) {
+      processedUrl = url.substring(basePathNormalized.length);
+    }
   }
-  
+
+  // Ensure leading slash
+  if (!processedUrl.startsWith('/')) {
+    processedUrl = '/' + processedUrl;
+  }
+ 
   const parts = processedUrl.toLowerCase().replace(/^\/+/, "").replace(/\/+$/, "").split("/");
   
   // Check if we should skip splash page and go directly to first dataset

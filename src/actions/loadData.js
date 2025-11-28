@@ -1,3 +1,4 @@
+import { getBasePath } from "../util/extensions";
 import queryString from "query-string";
 import * as types from "./types";
 import { getServerAddress } from "../util/globals";
@@ -13,19 +14,30 @@ import { updateColorByWithRootSequenceData } from "../actions/colors";
 import { explodeTree } from "./tree";
 
 export function getDatasetNamesFromUrl(url) {
+  // Remove basePath prefix if present
+  const basePath = getBasePath();
+  let processedUrl = url;
+  
+  if (basePath && basePath !== '/') {
+    const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+    if (url.startsWith(basePathNormalized)) {
+      processedUrl = url.substring(basePathNormalized.length);
+    }
+  }
+ 
   let secondTreeUrl;
-  if (url.includes(":")) {
-    const parts = url.replace(/^\//, '')
+  if (processedUrl.includes(":")) {
+    const parts = processedUrl.replace(/^\//, '')
       .replace(/\/$/, '')
       .split(":");
-    url = parts[0];
+    processedUrl = parts[0];
     secondTreeUrl = parts[1];
   }
-  if (url.startsWith('/')) url = url.slice(1);
+  if (processedUrl.startsWith('/')) processedUrl = processedUrl.slice(1);
   if (secondTreeUrl && secondTreeUrl.startsWith('/')) {
     secondTreeUrl = secondTreeUrl.slice(1);
   }
-  return [url, secondTreeUrl];
+  return [processedUrl, secondTreeUrl];
 }
 
 export const loadSecondTree = (secondTreeUrl, firstTreeUrl) => async (dispatch, getState) => {
