@@ -169,7 +169,13 @@ export const autoLoadFirstDataset = () => async (dispatch, getState) => {
       // Sort datasets alphabetically and get the first one
       const sortedDatasets = data.datasets.sort((a, b) => a.request.localeCompare(b.request));
       const firstDataset = sortedDatasets[0].request;
-      dispatch(changePage({ path: `${basePath}${firstDataset}`, push: true }));
+      
+      // Construct the full path
+      const fullPath = basePath && basePath !== '/' 
+        ? `${basePath}${firstDataset}`.replace(/\/\//g, '/') 
+        : `/${firstDataset}`;
+      
+      dispatch(changePage({ path: fullPath, push: true }));
     } else {
       // No datasets available, show splash page with error
       dispatch(goTo404("No datasets found"));

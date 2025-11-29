@@ -133,7 +133,14 @@ async function dispatchCleanStart(dispatch, main, second, query, narrativeBlocks
   const json = await main.main;
   const measurementsData = main.measurements ? (await main.measurements) : undefined;
   const secondTreeDataset = second ? (await second.main) : undefined;
-  const pathnameShouldBe = second ? `${main.pathname}:${second.pathname}` : main.pathname;
+  
+  // Include basePath in the pathname
+  const basePath = getBasePath();
+  const datasetPath = second ? `${main.pathname}:${second.pathname}` : main.pathname;
+  const pathnameShouldBe = basePath && basePath !== '/' 
+    ? `${basePath}${datasetPath}`.replace(/\/\//g, '/') 
+    : datasetPath; 
+
   dispatch({
     type: types.CLEAN_START,
     pathnameShouldBe: narrativeBlocks ? undefined : pathnameShouldBe,
