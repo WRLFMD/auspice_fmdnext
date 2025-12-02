@@ -54,7 +54,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   let extensionData;
   if (extensionPath) {
     // console.log("BUILDING WITH EXTENSIONS");
-    const dir = path.resolve(__dirname, path.dirname(extensionPath));
+    const dir = path.dirname(path.resolve(extensionPath));
     aliasesToResolve["@extensions"] = dir;
     extensionData = JSON.parse(fs.readFileSync(extensionPath, {encoding: 'utf8'}));
     if (extensionData.googleAnalyticsKey) {

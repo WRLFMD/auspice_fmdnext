@@ -14,17 +14,18 @@ import { updateColorByWithRootSequenceData } from "../actions/colors";
 import { explodeTree } from "./tree";
 
 export function getDatasetNamesFromUrl(url) {
-  // Remove basePath prefix if present
+  // Remove basePath prefix if present, but ONLY for the initial parsing
   const basePath = getBasePath();
   let processedUrl = url;
   
   if (basePath && basePath !== '/') {
     const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
-    if (url.startsWith(basePathNormalized)) {
+    // Only remove basePath if the URL actually starts with it AND has content after it
+    if (url.startsWith(basePathNormalized + '/')) {
       processedUrl = url.substring(basePathNormalized.length);
     }
   }
- 
+  
   let secondTreeUrl;
   if (processedUrl.includes(":")) {
     const parts = processedUrl.replace(/^\//, '')
@@ -33,10 +34,13 @@ export function getDatasetNamesFromUrl(url) {
     processedUrl = parts[0];
     secondTreeUrl = parts[1];
   }
+  
+  // Clean up leading slashes
   if (processedUrl.startsWith('/')) processedUrl = processedUrl.slice(1);
   if (secondTreeUrl && secondTreeUrl.startsWith('/')) {
     secondTreeUrl = secondTreeUrl.slice(1);
   }
+  
   return [processedUrl, secondTreeUrl];
 }
 
