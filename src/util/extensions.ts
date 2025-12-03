@@ -1,12 +1,9 @@
-// TODO: Add typing for individual extensions.
-// See docs/customise-client/api.rst.
 type Extensions = {
   [key: string]: any
 }
 
 const registry: Extensions = ((): Extensions => {
   if (!process.env.EXTENSION_DATA) {
-    // console.log("no EXTENSION_DATA found");
     return {};
   }
 
@@ -15,20 +12,20 @@ const registry: Extensions = ((): Extensions => {
 
   Object.keys(extensions).forEach((key: string) => {
     if (key.endsWith("Component")) {
-      // console.log("loading component", key);
-      /* "@extensions" is a webpack alias - normalize the path */
-      const componentPath = extensions[key].startsWith('./') || extensions[key].startsWith('../')
-        ? extensions[key]
-        : `./${extensions[key]}`;
-      
-      extensions[key] = require(`@extensions/${componentPath}`).default;
+      try {
+        // Paths are already normalized by webpack config, just load them
+        const componentPath = extensions[key];
+        console.log(`Loading component ${key} from: @extensions/${componentPath}`);
+        extensions[key] = require(`@extensions/${componentPath}`).default;
+      } catch (err) {
+        console.error(`Failed to load extension component ${key}:`, err);
+        throw err;
+      }
     }
   });
-  // console.log("extensions", extensions);
 
   return extensions;
 })();
-
 
 export const getExtension = (what: string): any | false => {
   if (registry[what]) {
@@ -42,10 +39,6 @@ export const hasExtension = (what: string): boolean => {
   return Object.keys(registry).includes(what);
 };
 
-/**
- * Get the base path for the application
- * This is used for client-side routing and navigation
- */
 export const getBasePath = (): string => {
   return registry.basePath || '/';
 };

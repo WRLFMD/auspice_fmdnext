@@ -51,18 +51,49 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     ...resolvedCoreDeps
   };
 
-  let extensionData;
-  if (extensionPath) {
-    // Get the directory containing the extension JSON file
-    // Use path.resolve to get absolute path, then path.dirname to get directory
-    const dir = path.dirname(path.resolve(extensionPath));
-    aliasesToResolve["@extensions"] = dir;
-    extensionData = JSON.parse(fs.readFileSync(extensionPath, {encoding: 'utf8'}));
-    if (extensionData.googleAnalyticsKey) {
-      console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
+let extensionData;
+if (extensionPath) {
+  const resolvedExtensionPath = path.resolve(extensionPath);
+  const extensionDir = path.dirname(resolvedExtensionPath);
+  
+  aliasesToResolve["@extensions"] = extensionDir;
+  extensionData = JSON.parse(fs.readFileSync(resolvedExtensionPath, {encoding: 'utf8'}));
+  
+  // Normalize component paths to absolute paths
+  Object.keys(extensionData).forEach((key) => {
+    if (key.endsWith('Component') || key === 'navbarLogo' || key === 'favicon') {
+      const originalPath = extensionData[key];
+      
+      if (originalPath) {
+        let resolvedPath;
+        
+        // Check if it's an absolute path
+        if (path.isAbsolute(originalPath)) {
+          resolvedPath = originalPath;
+        } else {
+          // It's a relative path - resolve relative to the extension JSON file location
+          resolvedPath = path.resolve(extensionDir, originalPath);
+        }
+        
+        // Convert back to relative path from extensionDir for webpack
+        const relativePath = path.relative(extensionDir, resolvedPath);
+        
+        // Normalize to use forward slashes and ensure it starts with ./
+        let normalizedPath = relativePath.split(path.sep).join('/');
+        if (!normalizedPath.startsWith('./') && !normalizedPath.startsWith('../')) {
+          normalizedPath = './' + normalizedPath;
+        }
+        
+        console.log(`${key}: "${originalPath}" -> "${normalizedPath}"`);
+        extensionData[key] = normalizedPath;
+      }
     }
-    // console.log("extensionData", extensionData);
+  });
+  
+  if (extensionData.googleAnalyticsKey) {
+    console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
   }
+}
 
   const customPublicPath = extensionData?.publicPath || "/dist/";
   const normalizedPublicPath = customPublicPath.endsWith('/') 
