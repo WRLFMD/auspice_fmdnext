@@ -84,7 +84,6 @@ if (extensionPath) {
           normalizedPath = './' + normalizedPath;
         }
         
-        console.log(`${key}: "${originalPath}" -> "${normalizedPath}"`);
         extensionData[key] = normalizedPath;
       }
     }
@@ -99,11 +98,6 @@ if (extensionPath) {
   const normalizedPublicPath = customPublicPath.endsWith('/') 
     ? customPublicPath 
     : customPublicPath + '/';
-
-  console.log('=== WEBPACK CONFIG ===');
-  console.log('publicPath:', normalizedPublicPath);
-  console.log('extensionData:', JSON.stringify(extensionData, null, 2));
-  console.log('=====================');
 
   /* plugins */
   /* inject strings into the client-accessible process.env */
