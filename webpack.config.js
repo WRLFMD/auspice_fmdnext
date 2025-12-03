@@ -53,7 +53,8 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
 
   let extensionData;
   if (extensionPath) {
-    // console.log("BUILDING WITH EXTENSIONS");
+    // Get the directory containing the extension JSON file
+    // Use path.resolve to get absolute path, then path.dirname to get directory
     const dir = path.dirname(path.resolve(extensionPath));
     aliasesToResolve["@extensions"] = dir;
     extensionData = JSON.parse(fs.readFileSync(extensionPath, {encoding: 'utf8'}));

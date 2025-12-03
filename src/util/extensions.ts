@@ -16,8 +16,12 @@ const registry: Extensions = ((): Extensions => {
   Object.keys(extensions).forEach((key: string) => {
     if (key.endsWith("Component")) {
       // console.log("loading component", key);
-      /* "@extensions" is a webpack alias */
-      extensions[key] = require(`@extensions/${extensions[key]}`).default;
+      /* "@extensions" is a webpack alias - normalize the path */
+      const componentPath = extensions[key].startsWith('./') || extensions[key].startsWith('../')
+        ? extensions[key]
+        : `./${extensions[key]}`;
+      
+      extensions[key] = require(`@extensions/${componentPath}`).default;
     }
   });
   // console.log("extensions", extensions);
