@@ -14,15 +14,21 @@ import { updateColorByWithRootSequenceData } from "../actions/colors";
 import { explodeTree } from "./tree";
 
 export function getDatasetNamesFromUrl(url) {
-  // Remove basePath prefix if present, but ONLY for the initial parsing
+  // Remove basePath prefix if present, but ONLY when the URL contains the full basePath
   const basePath = getBasePath();
   let processedUrl = url;
   
   if (basePath && basePath !== '/') {
+    // Normalize basePath - remove trailing slash for comparison
     const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
-    // Only remove basePath if the URL actually starts with it AND has content after it
-    if (url.startsWith(basePathNormalized + '/')) {
-      processedUrl = url.substring(basePathNormalized.length);
+    
+    // Only strip if URL actually starts with the basePath followed by more content
+    if (url.startsWith(basePathNormalized)) {
+      // Check if there's content after basePath
+      const remainder = url.substring(basePathNormalized.length);
+      if (remainder.startsWith('/') || remainder === '') {
+        processedUrl = remainder;
+      }
     }
   }
   
