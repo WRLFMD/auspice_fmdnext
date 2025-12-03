@@ -13,13 +13,20 @@ const registry: Extensions = ((): Extensions => {
   Object.keys(extensions).forEach((key: string) => {
     if (key.endsWith("Component")) {
       try {
-        // Paths are already normalized by webpack config, just load them
+        // Paths come without leading ./ from webpack config
+        // Add ./ here for the require
         const componentPath = extensions[key];
-        console.log(`Loading component ${key} from: @extensions/${componentPath}`);
-        extensions[key] = require(`@extensions/${componentPath}`).default;
+        const requirePath = componentPath.startsWith('./') || componentPath.startsWith('../') 
+          ? componentPath 
+          : './' + componentPath;
+        
+        console.log(`Loading component ${key} from: @extensions/${requirePath}`);
+        extensions[key] = require(`@extensions/${requirePath}`).default;
       } catch (err) {
-        console.error(`Failed to load extension component ${key}:`, err);
-        throw err;
+        console.error(`Failed to load extension component ${key}:`, err.message);
+        // Log more details
+        console.error('Extension data:', extensions[key]);
+        console.error('Full error:', err);
       }
     }
   });

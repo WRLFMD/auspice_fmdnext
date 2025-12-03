@@ -55,11 +55,11 @@ let extensionData;
 if (extensionPath) {
   const resolvedExtensionPath = path.resolve(extensionPath);
   const extensionDir = path.dirname(resolvedExtensionPath);
-  
+   
   aliasesToResolve["@extensions"] = extensionDir;
   extensionData = JSON.parse(fs.readFileSync(resolvedExtensionPath, {encoding: 'utf8'}));
   
-  // Normalize component paths to absolute paths
+  // Normalize component paths - remove ALL leading dots and slashes
   Object.keys(extensionData).forEach((key) => {
     if (key.endsWith('Component') || key === 'navbarLogo' || key === 'favicon') {
       const originalPath = extensionData[key];
@@ -75,14 +75,14 @@ if (extensionPath) {
           resolvedPath = path.resolve(extensionDir, originalPath);
         }
         
-        // Convert back to relative path from extensionDir for webpack
+        // Convert back to relative path from extensionDir
         const relativePath = path.relative(extensionDir, resolvedPath);
         
-        // Normalize to use forward slashes and ensure it starts with ./
+        // Normalize to use forward slashes and REMOVE all leading ./ or ../
         let normalizedPath = relativePath.split(path.sep).join('/');
-        if (!normalizedPath.startsWith('./') && !normalizedPath.startsWith('../')) {
-          normalizedPath = './' + normalizedPath;
-        }
+        
+        // Strip leading ./ or ../
+        normalizedPath = normalizedPath.replace(/^\.\//, '').replace(/^\.\.\//, '');
         
         extensionData[key] = normalizedPath;
       }
@@ -93,6 +93,12 @@ if (extensionPath) {
     console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
   }
 }
+
+  console.log('=== FINAL EXTENSION DATA ===');
+  console.log(JSON.stringify(extensionData, null, 2));
+  console.log('=== @extensions ALIAS ===');
+  console.log(aliasesToResolve["@extensions"]);
+  console.log('=========================');
 
   const customPublicPath = extensionData?.publicPath || "/dist/";
   const normalizedPublicPath = customPublicPath.endsWith('/') 
