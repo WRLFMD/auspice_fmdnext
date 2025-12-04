@@ -51,6 +51,9 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     ...resolvedCoreDeps
   };
 
+  // Variable to store logo info for the copy plugin
+  let logoInfo = null;
+
 let extensionData;
 if (extensionPath) {
   const resolvedExtensionPath = path.resolve(extensionPath);
@@ -88,17 +91,50 @@ if (extensionPath) {
       }
     }
   });
-  
+
+  // Handle logo file - prepare for copying to dist
+  if (extensionData.navbarLogo) {
+    const logoSrc = path.resolve(extensionDir, extensionData.navbarLogo.replace(/^\.\//, ''));
+    const logoFilename = path.basename(logoSrc);
+    
+    console.log('Logo source path:', logoSrc);
+    console.log('Logo file exists:', fs.existsSync(logoSrc));
+    console.log('Logo will be copied as:', logoFilename);
+    
+    logoInfo = { src: logoSrc, filename: logoFilename };
+    extensionData.navbarLogoFilename = logoFilename; // Store just the filename
+  } 
+
   if (extensionData.googleAnalyticsKey) {
     console.log(`DEPRECATION WARNING: your extensions define a Google Analytics key (${extensionData.googleAnalyticsKey}) but GA will be removed from a future release.`);
   }
 }
 
-  console.log('=== FINAL EXTENSION DATA ===');
-  console.log(JSON.stringify(extensionData, null, 2));
-  console.log('=== @extensions ALIAS ===');
-  console.log(aliasesToResolve["@extensions"]);
-  console.log('=========================');
+  /* Custom plugin to copy logo to dist */
+  class CopyLogoPlugin {
+    apply(compiler) {
+      compiler.hooks.emit.tapAsync('CopyLogoPlugin', (compilation, callback) => {
+        if (logoInfo && fs.existsSync(logoInfo.src)) {
+          try {
+            const logoContent = fs.readFileSync(logoInfo.src);
+           
+            // Add logo to webpack assets
+            compilation.assets[logoInfo.filename] = {
+              source: () => logoContent,
+              size: () => logoContent.length
+            };
+            
+            console.log(`✓ Logo copied to dist: ${logoInfo.filename}`);
+          } catch (err) {
+            console.error('✗ Failed to copy logo:', err.message);
+          }
+        } else if (logoInfo) {
+          console.warn('⚠ Logo file not found:', logoInfo.src);
+        }
+        callback();
+      });
+    }
+  }
 
   const customPublicPath = extensionData?.publicPath || "/dist/";
   const normalizedPublicPath = customPublicPath.endsWith('/') 
@@ -150,14 +186,16 @@ if (extensionPath) {
     new webpack.HotModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    new CopyLogoPlugin()
   ] : [
     new LodashModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginCompressGzip,
     pluginCompressBrotli,
     pluginHtml,
-    cleanWebpackPlugin
+    cleanWebpackPlugin,
+    new CopyLogoPlugin()
   ];
 
   if (analyzeBundle) {

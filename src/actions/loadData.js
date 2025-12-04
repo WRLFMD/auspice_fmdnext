@@ -14,39 +14,54 @@ import { updateColorByWithRootSequenceData } from "../actions/colors";
 import { explodeTree } from "./tree";
 
 export function getDatasetNamesFromUrl(url) {
-  // Remove basePath prefix if present, but ONLY when the URL contains the full basePath
+  // Remove basePath prefix to get the actual dataset path
   const basePath = getBasePath();
   let processedUrl = url;
-  
+
+  console.log('=== getDatasetNamesFromUrl DEBUG ===');
+  console.log('Input URL:', url);
+  console.log('BasePath:', basePath);  
+
   if (basePath && basePath !== '/') {
-    // Normalize basePath - remove trailing slash for comparison
-    const basePathNormalized = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+    // Normalize basePath - remove trailing slash for consistent comparison
+    const basePathNormalized = basePath.replace(/\/$/, '');
     
-    // Only strip if URL actually starts with the basePath followed by more content
-    if (url.startsWith(basePathNormalized)) {
-      // Check if there's content after basePath
+    console.log('Normalized basePath:', basePathNormalized);
+    
+    // Check if URL starts with basePath
+    if (url.startsWith(basePathNormalized + '/')) {
+      // URL has basePath + content after it - strip the basePath
       const remainder = url.substring(basePathNormalized.length);
-      if (remainder.startsWith('/') || remainder === '') {
-        processedUrl = remainder;
-      }
+      processedUrl = remainder;
+      console.log('Stripped basePath, remainder:', remainder);
+    } else if (url === basePathNormalized) {
+      // URL is exactly the basePath (no dataset)
+      processedUrl = '';
+      console.log('URL equals basePath exactly, setting to empty');
     }
   }
+
+  console.log('Processed URL before colon handling:', processedUrl);
   
+  // Handle second tree notation (colon-separated)
   let secondTreeUrl;
   if (processedUrl.includes(":")) {
-    const parts = processedUrl.replace(/^\//, '')
-      .replace(/\/$/, '')
-      .split(":");
+    const parts = processedUrl.replace(/^\//, '').replace(/\/$/, '').split(":");
     processedUrl = parts[0];
     secondTreeUrl = parts[1];
+    console.log('Found second tree:', secondTreeUrl);
   }
   
-  // Clean up leading slashes
-  if (processedUrl.startsWith('/')) processedUrl = processedUrl.slice(1);
-  if (secondTreeUrl && secondTreeUrl.startsWith('/')) {
-    secondTreeUrl = secondTreeUrl.slice(1);
+  // Clean up leading and trailing slashes
+  processedUrl = processedUrl.replace(/^\/+/, '').replace(/\/+$/, '');
+  if (secondTreeUrl) {
+    secondTreeUrl = secondTreeUrl.replace(/^\/+/, '');
   }
-  
+ 
+  console.log('Final dataset path:', processedUrl);
+  console.log('Final second tree:', secondTreeUrl);
+  console.log('===================================');
+
   return [processedUrl, secondTreeUrl];
 }
 
