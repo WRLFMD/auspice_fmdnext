@@ -69,5 +69,10 @@ class ChooseDataset extends React.Component {
   }
 }
 
+console.log('=== Sidebar Dataset Selector Debug ===');
+console.log('Available datasets:', available.datasets);
+console.log('Current dataset:', dataset);
+console.log('=====================================');
+
 const WithTranslation = withTranslation()(ChooseDataset);
 export default WithTranslation;
