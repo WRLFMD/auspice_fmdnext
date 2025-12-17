@@ -2,7 +2,6 @@
 const path = require("path");
 const webpack = require("webpack");
 const CompressionPlugin = require('compression-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
 const utils = require('./cli/utils');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -12,8 +11,34 @@ const zlib = require("zlib");
 
 /* Webpack config generator */
 
+// Logo info variable (used by custom plugin)
+let logoInfo = null;
+
+/* Custom plugin to copy logo to dist */
+class CopyLogoPlugin {
+  apply(compiler) {
+    compiler.hooks.emit.tapAsync('CopyLogoPlugin', (compilation, callback) => {
+      if (logoInfo && fs.existsSync(logoInfo.src)) {
+        try {
+          const logoContent = fs.readFileSync(logoInfo.src);
+          compilation.assets[logoInfo.filename] = {
+            source: () => logoContent,
+            size: () => logoContent.length
+          };
+        } catch (err) {
+          console.error('Failed to copy logo:', err.message);
+        }
+      }
+      callback();
+    });
+  }
+}
+
 const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyzeBundle=false}) => {
   utils.verbose(`Generating webpack config. Extensions? ${!!extensionPath}. devMode: ${devMode}`);
+
+  // Reset logoInfo for each config generation
+  logoInfo = null;
 
   // Pins all react stuff, and uses hot loader's dom (can be used safely in production)
   // Format is either "libName" or "libName:libPath"
@@ -82,11 +107,15 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
       }
     });
 
-    // Handle navbar logo - extract just the filename for runtime access
+    // Handle navbar logo - set up for custom plugin
     if (extensionData.navbarLogo) {
       const logoSrc = path.resolve(extensionDir, extensionData.navbarLogo.replace(/^\.\//, ''));
       const logoFilename = path.basename(logoSrc);
-      extensionData.navbarLogoFilename = logoFilename;
+      
+      if (fs.existsSync(logoSrc)) {
+        logoInfo = { src: logoSrc, filename: logoFilename };
+        extensionData.navbarLogoFilename = logoFilename;
+      }
     }
 
     if (extensionData.googleAnalyticsKey) {
@@ -139,37 +168,14 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
   const cleanWebpackPlugin = new CleanWebpackPlugin({
     cleanStaleWebpackAssets: true
   });
-
-  // Copy static assets (like navbar logo) to dist directory
-  const copyPatterns = [];
-  if (extensionData?.navbarLogo && extensionPath) {
-    const logoSrc = path.resolve(
-      path.dirname(extensionPath), 
-      extensionData.navbarLogo.replace(/^\.\//, '')
-    );
-    
-    // Only add copy pattern if file exists
-    if (fs.existsSync(logoSrc)) {
-      copyPatterns.push({
-        from: logoSrc,
-        to: path.basename(logoSrc), // Copy to root of dist with same filename
-        noErrorOnMissing: true
-      });
-    }
-  }
-
-  // Create CopyWebpackPlugin only if there are files to copy
-  const pluginCopy = copyPatterns.length > 0 
-    ? new CopyWebpackPlugin({ patterns: copyPatterns })
-    : null;
-
+  
   const plugins = devMode ? [
     new LodashModuleReplacementPlugin(),
     new webpack.HotModuleReplacementPlugin(),
     pluginProcessEnvData,
     pluginHtml,
     cleanWebpackPlugin,
-    ...(pluginCopy ? [pluginCopy] : [])
+    ...(logoInfo ? [new CopyLogoPlugin()] : [])
   ] : [
     new LodashModuleReplacementPlugin(),
     pluginProcessEnvData,
@@ -177,7 +183,7 @@ const generateConfig = ({extensionPath, devMode=false, customOutputPath, analyze
     pluginCompressBrotli,
     pluginHtml,
     cleanWebpackPlugin,
-    ...(pluginCopy ? [pluginCopy] : [])
+    ...(logoInfo ? [new CopyLogoPlugin()] : [])
   ];
 
   if (analyzeBundle) {
